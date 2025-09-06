@@ -1,4 +1,4 @@
-module github.com/wwplugin/wwplugin
+module github.com/wwwlkj/wwhyplugin
 
 go 1.23.0
 
