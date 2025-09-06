@@ -1206,7 +1206,7 @@ const file_proto_plugin_proto_rawDesc = "" +
 	"\x12CallPluginFunction\x12\x15.wwplugin.CallRequest\x1a\x16.wwplugin.CallResponse\x12H\n" +
 	"\x0fReceiveMessages\x12\x18.wwplugin.MessageRequest\x1a\x19.wwplugin.MessageResponse(\x01\x12D\n" +
 	"\x0fGetPluginStatus\x12\x17.wwplugin.StatusRequest\x1a\x18.wwplugin.StatusResponse\x12A\n" +
-	"\bShutdown\x12\x19.wwplugin.ShutdownRequest\x1a\x1a.wwplugin.ShutdownResponseB$Z\"github.com/wwplugin/wwplugin/protob\x06proto3"
+	"\bShutdown\x12\x19.wwplugin.ShutdownRequest\x1a\x1a.wwplugin.ShutdownResponseB$Z\"github.com/wwwlkj/wwhyplugin/protob\x06proto3"
 
 var (
 	file_proto_plugin_proto_rawDescOnce sync.Once

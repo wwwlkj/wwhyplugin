@@ -14,7 +14,7 @@ import (
 	"syscall"       // 系统调用，用于信号处理
 	"time"          // 时间处理，心跳和超时管理
 
-	"github.com/wwplugin/wwplugin/proto"          // gRPC协议定义
+	"github.com/wwwlkj/wwhyplugin/proto"          // gRPC协议定义
 	"google.golang.org/grpc"                      // gRPC框架
 	"google.golang.org/grpc/credentials/insecure" // gRPC安全凭据（不加密）
 )

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/wwplugin/wwplugin/proto"
+	"github.com/wwwlkj/wwhyplugin/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

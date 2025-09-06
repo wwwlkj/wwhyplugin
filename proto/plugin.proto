@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package wwplugin;
 
-option go_package = "github.com/wwplugin/wwplugin/proto";
+option go_package = "github.com/wwwlkj/wwhyplugin/proto";
 
 // 主程序提供给插件调用的服务
 service HostService {

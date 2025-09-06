@@ -9,7 +9,7 @@ import (
 	"sync"    // 同步原语
 	"time"    // 时间处理
 
-	"github.com/wwplugin/wwplugin/proto" // gRPC协议定义
+	"github.com/wwwlkj/wwhyplugin/proto" // gRPC协议定义
 	"google.golang.org/grpc"             // gRPC框架
 )
 

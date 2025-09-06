@@ -6,8 +6,8 @@ import (
 	"log"  // 日志记录，用于输出运行信息和错误
 	"time" // 时间处理，用于延时和定时操作
 
-	"github.com/wwplugin/wwplugin"       // WWPlugin插件框架核心库
-	"github.com/wwplugin/wwplugin/proto" // gRPC协议定义，用于参数传递
+	wwplugin "github.com/wwwlkj/wwhyplugin" // WWPlugin插件框架核心库
+	"github.com/wwwlkj/wwhyplugin/proto"    // gRPC协议定义，用于参数传递
 )
 
 // main 主函数 - 程序入口点

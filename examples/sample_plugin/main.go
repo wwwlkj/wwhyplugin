@@ -10,8 +10,8 @@ import (
 	"strconv" // 字符串转换，用于数值类型转换
 	"strings" // 字符串处理，用于文本操作函数
 
-	"github.com/wwplugin/wwplugin"       // WWPlugin插件框架核心库
-	"github.com/wwplugin/wwplugin/proto" // gRPC协议定义，用于参数和返回值
+	wwplugin "github.com/wwwlkj/wwhyplugin" // WWPlugin插件框架核心库
+	"github.com/wwwlkj/wwhyplugin/proto"    // gRPC协议定义，用于参数和返回值
 )
 
 // main 主函数 - 插件程序入口点

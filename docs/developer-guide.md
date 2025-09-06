@@ -43,7 +43,7 @@ protoc --go_out=. --go_grpc_out=. proto/plugin.proto
 package main
 
 import (
-    "github.com/wwplugin/wwplugin"
+    "github.com/wwwlkj/wwhyplugin"
 )
 
 func main() {
@@ -64,7 +64,7 @@ package main
 
 import (
     "context"
-    "github.com/wwplugin/wwplugin"
+    "github.com/wwwlkj/wwhyplugin"
     "github.com/wwplugin/wwplugin/proto"
 )
 

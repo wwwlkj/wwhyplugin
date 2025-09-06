@@ -21,7 +21,7 @@ WWPlugin 是一个基于 gRPC 的高性能、跨平台插件框架，支持多�
 ## 📦 安装
 
 ```bash
-go get github.com/wwplugin/wwplugin
+go get github.com/wwwlkj/wwhyplugin
 ```
 
 ## 🎯 快速开始
@@ -33,7 +33,7 @@ package main
 
 import (
     "log"
-    "github.com/wwplugin/wwplugin"
+    "github.com/wwwlkj/wwhyplugin"
 )
 
 func main() {
@@ -75,7 +75,7 @@ package main
 
 import (
     "context"
-    "github.com/wwplugin/wwplugin"
+    "github.com/wwwlkj/wwhyplugin"
     "github.com/wwplugin/wwplugin/proto"
 )
 

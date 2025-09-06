@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/wwplugin/wwplugin"
+	wwplugin "github.com/wwwlkj/wwhyplugin"
 )
 
 // 这个文件用于测试库的编译是否正常
