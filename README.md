@@ -1,7 +1,7 @@
 # WWPlugin - 通用插件框架库
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/wwplugin/wwplugin)](https://goreportcard.com/report/github.com/wwplugin/wwplugin)
-[![GoDoc](https://godoc.org/github.com/wwplugin/wwplugin?status.svg)](https://godoc.org/github.com/wwplugin/wwplugin)
+[![Go Report Card](https://goreportcard.com/badge/github.com/wwwlkj/wwhyplugin)](https://goreportcard.com/report/github.com/wwwlkj/wwhyplugin)
+[![GoDoc](https://godoc.org/github.com/wwwlkj/wwhyplugin?status.svg)](https://godoc.org/github.com/wwwlkj/wwhyplugin)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 WWPlugin 是一个基于 gRPC 的高性能、跨平台插件框架，支持多进程架构和双向通信。
@@ -76,7 +76,7 @@ package main
 import (
     "context"
     "github.com/wwwlkj/wwhyplugin"
-    "github.com/wwplugin/wwplugin/proto"
+    "github.com/wwwlkj/wwhyplugin/proto"
 )
 
 func main() {
@@ -109,7 +109,7 @@ func myFunction(ctx context.Context, params []*proto.Parameter) (*proto.Paramete
 ## 📖 文档
 
 详细文档请参阅：
-- [API 文档](https://godoc.org/github.com/wwplugin/wwplugin)
+- [API 文档](https://godoc.org/github.com/wwwlkj/wwhyplugin)
 - [用户指南](docs/user-guide.md)
 - [开发指南](docs/developer-guide.md)
 - [示例代码](examples/)
