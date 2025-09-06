@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package wwplugin;
+
+option go_package = "github.com/wwplugin/wwplugin/proto";
+
+// 主程序提供给插件调用的服务
+service HostService {
+  // 插件注册
+  rpc RegisterPlugin(RegisterRequest) returns (RegisterResponse);
+  // 插件发送心跳
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // 插件调用主程序的函数
+  rpc CallHostFunction(CallRequest) returns (CallResponse);
+  // 插件上报日志
+  rpc ReportLog(LogRequest) returns (LogResponse);
+}
+
+// 插件提供给主程序调用的服务
+service PluginService {
+  // 主程序调用插件函数
+  rpc CallPluginFunction(CallRequest) returns (CallResponse);
+  // 主程序向插件推送消息流
+  rpc ReceiveMessages(stream MessageRequest) returns (MessageResponse);
+  // 插件状态查询
+  rpc GetPluginStatus(StatusRequest) returns (StatusResponse);
+  // 插件关闭通知
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+// 插件注册请求
+message RegisterRequest {
+  string plugin_id = 1;       // 插件唯一标识
+  string plugin_name = 2;     // 插件名称
+  string version = 3;         // 插件版本
+  string description = 4;     // 插件描述
+  int32 port = 5;            // 插件gRPC服务端口
+  repeated string capabilities = 6; // 插件能力列表
+}
+
+// 插件注册响应
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+  string host_id = 3;        // 主程序分配的ID
+}
+
+// 心跳请求
+message HeartbeatRequest {
+  string plugin_id = 1;
+  int64 timestamp = 2;
+  string status = 3;         // running, idle, busy, error
+}
+
+// 心跳响应
+message HeartbeatResponse {
+  bool success = 1;
+  string message = 2;
+  int64 server_timestamp = 3;
+}
+
+// 函数调用请求
+message CallRequest {
+  string function_name = 1;   // 要调用的函数名
+  repeated Parameter parameters = 2; // 参数列表
+  map<string, string> metadata = 3;  // 元数据
+  string request_id = 4;      // 请求ID，用于追踪
+}
+
+// 函数调用响应
+message CallResponse {
+  bool success = 1;
+  string message = 2;
+  Parameter result = 3;       // 返回结果
+  string error_code = 4;      // 错误码
+  string request_id = 5;      // 对应的请求ID
+}
+
+// 参数定义
+message Parameter {
+  string name = 1;           // 参数名
+  ParameterType type = 2;    // 参数类型
+  string value = 3;          // 参数值（JSON字符串）
+}
+
+// 参数类型枚举
+enum ParameterType {
+  STRING = 0;
+  INT = 1;
+  FLOAT = 2;
+  BOOL = 3;
+  JSON = 4;
+  BYTES = 5;
+}
+
+// 日志请求
+message LogRequest {
+  string plugin_id = 1;
+  LogLevel level = 2;
+  string message = 3;
+  int64 timestamp = 4;
+  string category = 5;       // 日志分类
+}
+
+// 日志响应
+message LogResponse {
+  bool success = 1;
+}
+
+// 日志级别
+enum LogLevel {
+  DEBUG = 0;
+  INFO = 1;
+  WARN = 2;
+  ERROR = 3;
+}
+
+// 消息推送请求
+message MessageRequest {
+  string message_id = 1;     // 消息ID
+  string message_type = 2;   // 消息类型
+  string content = 3;        // 消息内容
+  int64 timestamp = 4;       // 时间戳
+  map<string, string> metadata = 5; // 消息元数据
+}
+
+// 消息响应
+message MessageResponse {
+  bool success = 1;
+  string message = 2;
+  int32 processed_count = 3; // 处理的消息数量
+}
+
+// 状态查询请求
+message StatusRequest {
+  bool include_metrics = 1;   // 是否包含指标信息
+}
+
+// 状态查询响应
+message StatusResponse {
+  string status = 1;          // 插件状态
+  string uptime = 2;          // 运行时间
+  map<string, string> metrics = 3; // 指标信息
+  repeated string active_functions = 4; // 活跃的函数列表
+}
+
+// 关闭请求
+message ShutdownRequest {
+  bool force = 1;            // 是否强制关闭
+  int32 timeout_seconds = 2; // 关闭超时时间
+  string reason = 3;         // 关闭原因
+}
+
+// 关闭响应
+message ShutdownResponse {
+  bool success = 1;
+  string message = 2;
+}
