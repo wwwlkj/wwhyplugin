@@ -32,6 +32,16 @@ var (
 	procGetLastError = kernel32.NewProc("GetLastError")   // 获取最后错误API函数
 )
 
+// windowsSingletonManager Windows下的单实例管理器内部结构体
+// 用于保持互斥体句柄和相关资源
+type windowsSingletonManager struct {
+	mutexHandle syscall.Handle // 互斥体句柄，必须持续持有
+	mutexName   string         // 互斥体名称
+}
+
+// 全局变量，用于保持Windows互斥体管理器
+var globalMutexManager *windowsSingletonManager
+
 // CommandMessage 进程间通信消息结构体
 // 用于在不同进程实例间传递命令行参数
 type CommandMessage struct {
@@ -80,16 +90,25 @@ func CheckSingleInstance(config *SingletonConfig) (isFirst bool, listener net.Li
 	}
 
 	if isFirst {
-		// 首个实例：启动IPC服务器监听其他实例的连接
+		// 首个实例：保存互斥体句柄并启动IPC服务器
+		globalMutexManager = &windowsSingletonManager{
+			mutexHandle: mutexHandle,
+			mutexName:   config.MutexName,
+		}
+
 		listener, err := startIPCServer(config.IPCPort)
 		if err != nil {
 			// 如果启动服务器失败，释放互斥体
 			releaseMutex(mutexHandle)
+			globalMutexManager = nil
 			return false, nil, fmt.Errorf("启动IPC服务器失败: %v", err)
 		}
 		return true, listener, nil
 	} else {
 		// 后续实例：发送命令参数到首个实例并退出
+		// 先关闭当前实例的互斥体句柄
+		procCloseHandle.Call(uintptr(mutexHandle))
+
 		err := sendCommandToFirstInstance(config)
 		if err != nil {
 			return false, nil, fmt.Errorf("发送命令到首个实例失败: %v", err)
@@ -335,8 +354,19 @@ func readPortFromFile() (int, error) {
 }
 
 // CleanupSingleton 清理单实例相关资源
-// 在程序退出时调用，清理临时文件等资源
+// 在程序退出时调用，清理互斥体和临时文件等资源
 func CleanupSingleton() {
+	// 释放互斥体资源
+	if globalMutexManager != nil {
+		if globalMutexManager.mutexHandle != 0 {
+			// 释放互斥体
+			procReleaseMutex.Call(uintptr(globalMutexManager.mutexHandle))
+			// 关闭句柄
+			procCloseHandle.Call(uintptr(globalMutexManager.mutexHandle))
+		}
+		globalMutexManager = nil
+	}
+
 	// 获取临时目录
 	tempDir := os.TempDir()
 
