@@ -1,4 +1,4 @@
-// Package wwplugin 单实例功能辅助函数
+// Package wwplugin  单实例功能辅助函数
 // 提供简化的单实例管理接口，方便快速集成
 package wwplugin
 
