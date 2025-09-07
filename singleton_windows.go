@@ -11,6 +11,7 @@ import (
 	"net"           // 网络通信，用于进程间TCP通信
 	"os"            // 操作系统接口，用于获取命令行参数和进程信息
 	"strconv"       // 字符串转换，用于数字格式化
+	"strings"       // 字符串操作，用于文件名处理
 	"syscall"       // 系统调用，用于Windows API操作
 	"time"          // 时间处理，用于超时控制和时间戳
 	"unsafe"        // 不安全指针操作，用于Windows API参数传递
@@ -27,9 +28,9 @@ const (
 var (
 	kernel32         = syscall.NewLazyDLL("kernel32.dll") // 加载内核动态链接库
 	procCreateMutex  = kernel32.NewProc("CreateMutexW")   // 创建互斥体API函数
+	procOpenMutex    = kernel32.NewProc("OpenMutexW")     // 打开互斥体API函数
 	procReleaseMutex = kernel32.NewProc("ReleaseMutex")   // 释放互斥体API函数
 	procCloseHandle  = kernel32.NewProc("CloseHandle")    // 关闭句柄API函数
-	procGetLastError = kernel32.NewProc("GetLastError")   // 获取最后错误API函数
 )
 
 // windowsSingletonManager Windows下的单实例管理器内部结构体
@@ -96,7 +97,7 @@ func CheckSingleInstance(config *SingletonConfig) (isFirst bool, listener net.Li
 			mutexName:   config.MutexName,
 		}
 
-		listener, err := startIPCServer(config.IPCPort)
+		listener, err := startIPCServer(config.IPCPort, config.MutexName)
 		if err != nil {
 			// 如果启动服务器失败，释放互斥体
 			releaseMutex(mutexHandle)
@@ -129,28 +130,33 @@ func createMutex(mutexName string) (syscall.Handle, bool, error) {
 		return 0, false, fmt.Errorf("转换互斥体名称失败: %v", err)
 	}
 
-	// 调用Windows API创建互斥体
-	ret, _, _ := procCreateMutex.Call(
-		0,                                     // 安全属性，NULL表示使用默认安全描述符
-		0,                                     // 初始所有者，FALSE表示调用线程不获得互斥体所有权
-		uintptr(unsafe.Pointer(mutexNamePtr)), // 互斥体名称指针
+	// 首先尝试打开现有的互斥体
+	openHandle, _, _ := procOpenMutex.Call(
+		MUTEX_ALL_ACCESS,                      // 访问权限
+		0,                                     // 不继承句柄
+		uintptr(unsafe.Pointer(mutexNamePtr)), // 互斥体名称
 	)
 
-	// 检查API调用结果
-	if ret == 0 {
-		return 0, false, fmt.Errorf("CreateMutex API调用失败")
+	if openHandle != 0 {
+		// 互斥体已存在，这是后续实例
+		procCloseHandle.Call(uintptr(openHandle))
+		return 0, false, nil // 返回无效句柄，表示不是首个实例
 	}
 
-	// 获取最后的错误码
-	lastError, _, _ := procGetLastError.Call()
+	// 互斥体不存在，创建新的互斥体
+	createHandle, _, _ := procCreateMutex.Call(
+		0,                                     // 安全属性，NULL
+		1,                                     // 初始拥有者，立即获得所有权
+		uintptr(unsafe.Pointer(mutexNamePtr)), // 互斥体名称
+	)
 
-	// 转换句柄类型
-	handle := syscall.Handle(ret)
+	// 检查创建是否成功
+	if createHandle == 0 {
+		return 0, false, fmt.Errorf("CreateMutex失败")
+	}
 
-	// 判断是否为首个实例
-	isFirst := lastError != ERROR_ALREADY_EXISTS
-
-	return handle, isFirst, nil
+	handle := syscall.Handle(createHandle)
+	return handle, true, nil // 返回有效句柄，表示是首个实例
 }
 
 // releaseMutex 释放互斥体资源
@@ -177,8 +183,9 @@ func releaseMutex(handle syscall.Handle) error {
 
 // startIPCServer 启动进程间通信服务器
 // port: 监听端口，0表示自动分配
+// mutexName: 互斥体名称，用于生成端口文件名
 // 返回值：监听器对象，错误信息
-func startIPCServer(port int) (net.Listener, error) {
+func startIPCServer(port int, mutexName string) (net.Listener, error) {
 	// 构建监听地址
 	address := "127.0.0.1:" + strconv.Itoa(port)
 	if port == 0 {
@@ -193,7 +200,7 @@ func startIPCServer(port int) (net.Listener, error) {
 
 	// 将实际监听端口写入临时文件供其他实例读取
 	actualPort := listener.Addr().(*net.TCPAddr).Port
-	err = writePortToFile(actualPort)
+	err = writePortToFile(actualPort, mutexName)
 	if err != nil {
 		listener.Close() // 关闭监听器
 		return nil, fmt.Errorf("写入端口文件失败: %v", err)
@@ -206,7 +213,7 @@ func startIPCServer(port int) (net.Listener, error) {
 // config: 单实例配置参数
 func sendCommandToFirstInstance(config *SingletonConfig) error {
 	// 从临时文件读取首个实例的监听端口
-	port, err := readPortFromFile()
+	port, err := readPortFromFile(config.MutexName)
 	if err != nil {
 		return fmt.Errorf("读取端口文件失败: %v", err)
 	}
@@ -305,52 +312,62 @@ func HandleIPCConnection(conn net.Conn) (*CommandMessage, error) {
 
 // writePortToFile 将端口号写入临时文件
 // port: 要写入的端口号
-func writePortToFile(port int) error {
+// mutexName: 互斥体名称，用于生成文件名
+func writePortToFile(port int, mutexName string) error {
 	// 获取临时目录
 	tempDir := os.TempDir()
 
-	// 构建端口文件路径
-	portFile := fmt.Sprintf("%s\\wwplugin_port_%d.tmp", tempDir, os.Getpid())
+	// 使用互斥体名称的哈希值生成唯一但固定的文件名
+	// 替换路径分隔符和特殊字符，确保文件名有效
+	safeName := strings.ReplaceAll(mutexName, "Global\\", "")
+	safeName = strings.ReplaceAll(safeName, "\\", "_")
+	safeName = strings.ReplaceAll(safeName, ":", "_")
+	safeName = strings.ReplaceAll(safeName, "*", "_")
+	safeName = strings.ReplaceAll(safeName, "?", "_")
+	safeName = strings.ReplaceAll(safeName, "<", "_")
+	safeName = strings.ReplaceAll(safeName, ">", "_")
+	safeName = strings.ReplaceAll(safeName, "|", "_")
+
+	// 构建端口文件路径，使用互斥体名称而不是进程ID
+	portFile := fmt.Sprintf("%s\\wwplugin_port_%s.tmp", tempDir, safeName)
 
 	// 写入端口号到文件
 	return os.WriteFile(portFile, []byte(strconv.Itoa(port)), 0644)
 }
 
 // readPortFromFile 从临时文件读取端口号
+// mutexName: 互斥体名称，用于定位对应的端口文件
 // 返回值：端口号，错误信息
-func readPortFromFile() (int, error) {
+func readPortFromFile(mutexName string) (int, error) {
 	// 获取临时目录
 	tempDir := os.TempDir()
 
-	// 查找端口文件（可能有多个进程）
-	files, err := os.ReadDir(tempDir)
+	// 使用与writePortToFile相同的逻辑生成文件名
+	safeName := strings.ReplaceAll(mutexName, "Global\\", "")
+	safeName = strings.ReplaceAll(safeName, "\\", "_")
+	safeName = strings.ReplaceAll(safeName, ":", "_")
+	safeName = strings.ReplaceAll(safeName, "*", "_")
+	safeName = strings.ReplaceAll(safeName, "?", "_")
+	safeName = strings.ReplaceAll(safeName, "<", "_")
+	safeName = strings.ReplaceAll(safeName, ">", "_")
+	safeName = strings.ReplaceAll(safeName, "|", "_")
+
+	// 构建端口文件路径
+	portFile := fmt.Sprintf("%s\\wwplugin_port_%s.tmp", tempDir, safeName)
+
+	// 读取端口文件内容
+	data, err := os.ReadFile(portFile)
 	if err != nil {
-		return 0, fmt.Errorf("读取临时目录失败: %v", err)
+		return 0, fmt.Errorf("读取端口文件失败: %v", err)
 	}
 
-	// 遍历查找端口文件
-	for _, file := range files {
-		if len(file.Name()) > 14 && file.Name()[:14] == "wwplugin_port_" &&
-			len(file.Name()) > 4 && file.Name()[len(file.Name())-4:] == ".tmp" {
-
-			// 读取端口文件内容
-			portFile := fmt.Sprintf("%s\\%s", tempDir, file.Name())
-			data, err := os.ReadFile(portFile)
-			if err != nil {
-				continue // 跳过无法读取的文件
-			}
-
-			// 解析端口号
-			port, err := strconv.Atoi(string(data))
-			if err != nil {
-				continue // 跳过无法解析的文件
-			}
-
-			return port, nil
-		}
+	// 解析端口号
+	port, err := strconv.Atoi(string(data))
+	if err != nil {
+		return 0, fmt.Errorf("解析端口号失败: %v", err)
 	}
 
-	return 0, fmt.Errorf("未找到端口文件")
+	return port, nil
 }
 
 // CleanupSingleton 清理单实例相关资源
@@ -364,14 +381,34 @@ func CleanupSingleton() {
 			// 关闭句柄
 			procCloseHandle.Call(uintptr(globalMutexManager.mutexHandle))
 		}
+
+		// 清理对应的端口文件
+		if globalMutexManager.mutexName != "" {
+			cleanupPortFile(globalMutexManager.mutexName)
+		}
+
 		globalMutexManager = nil
 	}
+}
 
+// cleanupPortFile 清理端口文件
+// mutexName: 互斥体名称
+func cleanupPortFile(mutexName string) {
 	// 获取临时目录
 	tempDir := os.TempDir()
 
-	// 构建当前进程的端口文件路径
-	portFile := fmt.Sprintf("%s\\wwplugin_port_%d.tmp", tempDir, os.Getpid())
+	// 使用与writePortToFile相同的逻辑生成文件名
+	safeName := strings.ReplaceAll(mutexName, "Global\\", "")
+	safeName = strings.ReplaceAll(safeName, "\\", "_")
+	safeName = strings.ReplaceAll(safeName, ":", "_")
+	safeName = strings.ReplaceAll(safeName, "*", "_")
+	safeName = strings.ReplaceAll(safeName, "?", "_")
+	safeName = strings.ReplaceAll(safeName, "<", "_")
+	safeName = strings.ReplaceAll(safeName, ">", "_")
+	safeName = strings.ReplaceAll(safeName, "|", "_")
+
+	// 构建端口文件路径
+	portFile := fmt.Sprintf("%s\\wwplugin_port_%s.tmp", tempDir, safeName)
 
 	// 删除端口文件（忽略错误）
 	os.Remove(portFile)
