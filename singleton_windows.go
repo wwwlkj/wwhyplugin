@@ -107,8 +107,11 @@ func CheckSingleInstance(config *SingletonConfig) (isFirst bool, listener net.Li
 		return true, listener, nil
 	} else {
 		// 后续实例：发送命令参数到首个实例并退出
-		// 先关闭当前实例的互斥体句柄
-		procCloseHandle.Call(uintptr(mutexHandle))
+		// 注意：对于后续实例，createMutex返回的mutexHandle为0，不需要关闭
+		if mutexHandle != 0 {
+			// 如果有有效的句柄，则关闭它
+			procCloseHandle.Call(uintptr(mutexHandle))
+		}
 
 		err := sendCommandToFirstInstance(config)
 		if err != nil {
