@@ -58,12 +58,13 @@ type PluginInfo struct {
 // PluginBasicInfo 插件基础信息结构（用于信息查询）
 // 不包含运行时信息，仅包含静态元数据，用于--info查询
 type PluginBasicInfo struct {
-	ID           string   `json:"id"`           // 插件ID - 唯一标识符
-	Name         string   `json:"name"`         // 插件名称 - 用户友好名称
-	Version      string   `json:"version"`      // 插件版本 - 语义化版本号
-	Description  string   `json:"description"`  // 插件描述 - 功能说明
-	Capabilities []string `json:"capabilities"` // 插件能力 - 功能特性列表
-	Functions    []string `json:"functions"`    // 插件函数列表 - 可调用的函数名
+	ID           string   `json:"id"`             // 插件ID - 唯一标识符
+	Name         string   `json:"name"`           // 插件名称 - 用户友好名称
+	Version      string   `json:"version"`        // 插件版本 - 语义化版本号
+	Description  string   `json:"description"`    // 插件描述 - 功能说明
+	Logo         string   `json:"logo,omitempty"` // 插件Logo - Base64编码的图片数据或图片路径
+	Capabilities []string `json:"capabilities"`   // 插件能力 - 功能特性列表
+	Functions    []string `json:"functions"`      // 插件函数列表 - 可调用的函数名
 }
 
 // HostConfig 主程序配置结构体
@@ -88,10 +89,11 @@ type HostConfig struct {
 // 包含插件运行所需的所有配置参数
 type PluginConfig struct {
 	// === 基本信息 === //
-	Name         string   `json:"name"`         // 插件名称 - 显示名称
-	Version      string   `json:"version"`      // 插件版本 - 语义化版本号
-	Description  string   `json:"description"`  // 插件描述 - 功能说明
-	Capabilities []string `json:"capabilities"` // 插件能力列表 - 描述插件功能特性
+	Name         string   `json:"name"`           // 插件名称 - 显示名称
+	Version      string   `json:"version"`        // 插件版本 - 语义化版本号
+	Description  string   `json:"description"`    // 插件描述 - 功能说明
+	Logo         string   `json:"logo,omitempty"` // 插件Logo - Base64编码的图片数据或图片路径
+	Capabilities []string `json:"capabilities"`   // 插件能力列表 - 描述插件功能特性
 
 	// === 网络配置 === //
 	HostAddress string `json:"host_address"` // 主程序地址 - 插件连接的主机地址
@@ -165,6 +167,7 @@ func DefaultPluginConfig(name, version, description string) *PluginConfig {
 		Name:              name,
 		Version:           version,
 		Description:       description,
+		Logo:              "", // 默认为空Logo
 		Capabilities:      []string{},
 		HostAddress:       "localhost:50051",
 		HeartbeatInterval: 10 * time.Second,

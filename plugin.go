@@ -208,23 +208,9 @@ func (p *Plugin) CallOtherPlugin(targetPluginID string, functionName string, par
 	return resp, nil
 }
 
-// ReportLog 上报日志到主机
-func (p *Plugin) ReportLog(level proto.LogLevel, message, category string) {
-	req := &proto.LogRequest{
-		PluginId:  p.ID,
-		Level:     level,
-		Message:   message,
-		Timestamp: time.Now().Unix(),
-		Category:  category,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := p.HostClient.ReportLog(ctx, req)
-	if err != nil {
-		log.Printf("上报日志失败: %v", err)
-	}
+// GetConfig 获取插件配置
+func (p *Plugin) GetConfig() *PluginConfig {
+	return p.config
 }
 
 // GetPluginInfo 获取插件信息（不启动插件服务）
@@ -240,6 +226,7 @@ func (p *Plugin) GetPluginInfo() *PluginBasicInfo {
 		Name:         p.config.Name,
 		Version:      p.config.Version,
 		Description:  p.config.Description,
+		Logo:         p.config.Logo,
 		Capabilities: p.config.Capabilities,
 		Functions:    p.getFunctionList(),
 	}
