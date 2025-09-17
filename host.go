@@ -143,11 +143,26 @@ func (ph *PluginHost) Wait() {
 func (ph *PluginHost) LoadPlugin(executablePath string) (*PluginInfo, error) {
 	log.Printf("📦 正在加载插件: %s", executablePath)
 
-	// 创建临时插件信息
-	tempID := fmt.Sprintf("loading-%d", time.Now().UnixNano())
+	// 获取插件信息
+	pluginBasicInfo, err := ph.GetPluginInfo(executablePath)
+	if err != nil {
+		return nil, fmt.Errorf("获取插件信息失败: %v", err)
+	}
+
+	// 使用插件固定的ID，如果有的话
+	pluginID := pluginBasicInfo.ID
+	if pluginID == "" {
+		// 如果插件没有固定ID，则生成一个
+		pluginID = fmt.Sprintf("plugin-%d", time.Now().UnixNano())
+	}
 
 	pluginInfo := &PluginInfo{
-		ID:             tempID,
+		ID:             pluginID, // 使用插件固定的ID
+		Name:           pluginBasicInfo.Name,
+		Version:        pluginBasicInfo.Version,
+		Description:    pluginBasicInfo.Description,
+		Capabilities:   pluginBasicInfo.Capabilities,
+		Functions:      pluginBasicInfo.Functions,
 		ExecutablePath: executablePath,
 		Status:         StatusStopped,
 		AutoRestart:    ph.config.AutoRestartPlugin,
@@ -158,7 +173,7 @@ func (ph *PluginHost) LoadPlugin(executablePath string) (*PluginInfo, error) {
 	// 注册到注册表
 	ph.registry.Register(pluginInfo)
 
-	log.Printf("✅ 插件已加载（临时ID: %s）", tempID)
+	log.Printf("✅ 插件已加载（ID: %s）", pluginID)
 	return pluginInfo, nil
 }
 
@@ -185,7 +200,7 @@ func (ph *PluginHost) StartPluginByPath(executablePath string) (*PluginInfo, err
 	for _, plugin := range plugins {
 		if plugin.ExecutablePath == executablePath {
 			targetPlugin = plugin
-			break
+			return plugin, nil
 		}
 	}
 
