@@ -481,7 +481,7 @@ func (ph *PluginHost) monitorPluginProcess(plugin *PluginInfo) {
 	if plugin.Command != nil {
 		// 等待进程结束
 		err := plugin.Command.Wait()
-		if err != nil && plugin.Status != StatusStopping {
+		if err != nil && plugin.Status != StatusStopping && plugin.Status != StatusStopped {
 			log.Printf("插件进程异常退出: %s, 错误: %v", plugin.ID, err)
 			plugin.Status = StatusCrashed
 		} else {
