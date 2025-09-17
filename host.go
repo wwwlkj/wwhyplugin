@@ -225,16 +225,38 @@ func (ph *PluginHost) StopPlugin(pluginID string) error {
 	}
 
 	log.Printf("🛑 正在停止插件: %s", pluginID)
-	return ph.stopPluginProcess(plugin)
+	err := ph.stopPluginProcess(plugin)
+	if err == nil {
+		// 停止成功后从注册表中移除插件
+		ph.registry.Unregister(pluginID)
+		log.Printf("✅ 插件已从注册表中移除: %s", pluginID)
+	}
+	return err
 }
 
 // StopAllPlugins 停止所有插件
 func (ph *PluginHost) StopAllPlugins() {
 	plugins := ph.registry.List()
+	var pluginIDs []string
+
+	// 先收集所有需要停止的插件ID
+	for _, plugin := range plugins {
+		if plugin.Status == StatusRunning {
+			pluginIDs = append(pluginIDs, plugin.ID)
+		}
+	}
+
+	// 停止所有插件
 	for _, plugin := range plugins {
 		if plugin.Status == StatusRunning {
 			ph.stopPluginProcess(plugin)
 		}
+	}
+
+	// 从注册表中移除所有已停止的插件
+	for _, pluginID := range pluginIDs {
+		ph.registry.Unregister(pluginID)
+		log.Printf("✅ 插件已从注册表中移除: %s", pluginID)
 	}
 }
 
