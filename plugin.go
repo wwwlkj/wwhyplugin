@@ -512,21 +512,45 @@ func (p *Plugin) startConnectionMonitor() {
 				if time.Since(lastHeartbeatSuccess) > 30*time.Second {
 					log.Printf("⚠️ 检测到主机连接中断，尝试重连... (第 %d 次)", reconnectTries+1)
 
-					if p.attemptReconnect() {
-						log.Println("✅ 重连主机成功！")
-						lastHeartbeatSuccess = time.Now()
-						reconnectTries = 0
-					} else {
-						reconnectTries++
-						log.Printf("❌ 重连失败，将在 %v 后重试", p.reconnectInterval)
+					// 如果配置允许重连，则尝试重连
+					if p.maxReconnectTries != 0 { // 0表示无限重连
+						if p.attemptReconnect() {
+							log.Println("✅ 重连主机成功！")
+							lastHeartbeatSuccess = time.Now()
+							reconnectTries = 0
+						} else {
+							reconnectTries++
+							log.Printf("❌ 重连失败，将在 %v 后重试", p.reconnectInterval)
 
-						if p.maxReconnectTries > 0 && reconnectTries >= p.maxReconnectTries {
-							log.Printf("❌ 超过最大重连次数 (%d)，插件将退出", p.maxReconnectTries)
-							p.Stop()
-							return
+							// 检查是否超过最大重连次数
+							if p.maxReconnectTries > 0 && reconnectTries >= p.maxReconnectTries {
+								log.Printf("❌ 超过最大重连次数 (%d)", p.maxReconnectTries)
+
+								// 根据配置决定是否关闭插件
+								if p.config.CloseOnHostDisconnect {
+									log.Println("🔌 主机连接断开且配置为关闭插件，插件将退出")
+									p.Stop()
+									return
+								} else {
+									log.Println("🔌 主机连接断开但配置为保持运行，插件将继续运行")
+									// 停止心跳和监控，但保持插件运行
+									return
+								}
+							}
+
+							time.Sleep(p.reconnectInterval)
 						}
-
-						time.Sleep(p.reconnectInterval)
+					} else {
+						// 无限重连模式
+						if p.attemptReconnect() {
+							log.Println("✅ 重连主机成功！")
+							lastHeartbeatSuccess = time.Now()
+							reconnectTries = 0
+						} else {
+							reconnectTries++
+							log.Printf("❌ 重连失败，将在 %v 后重试", p.reconnectInterval)
+							time.Sleep(p.reconnectInterval)
+						}
 					}
 				}
 			}

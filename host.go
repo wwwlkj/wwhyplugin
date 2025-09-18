@@ -553,8 +553,8 @@ func (ph *PluginHost) checkPluginsHealth() {
 				log.Printf("插件 %s 心跳超时，标记为崩溃", plugin.ID)
 				plugin.Status = StatusCrashed
 
-				// 检查是否需要自动重启
-				if plugin.AutoRestart && plugin.RestartCount < plugin.MaxRestarts {
+				// 检查是否允许自动重启且需要自动重启
+				if ph.config.EnablePluginReconnect && plugin.AutoRestart && plugin.RestartCount < plugin.MaxRestarts {
 					plugin.RestartCount++
 					log.Printf("自动重启心跳超时的插件: %s (第 %d 次)", plugin.ID, plugin.RestartCount)
 					ph.startPluginProcess(plugin)

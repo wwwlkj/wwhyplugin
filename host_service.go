@@ -54,7 +54,7 @@ func (hs *hostService) RegisterPlugin(ctx context.Context, req *proto.RegisterRe
 	targetPlugin.Description = req.Description
 	targetPlugin.Port = req.Port
 	targetPlugin.Capabilities = req.Capabilities
-	targetPlugin.Status = StatusRunning
+	targetPlugin.Status = StatusStarting
 	targetPlugin.LastHeartbeat = time.Now()
 
 	// 如果ID发生变化，需要重新注册
@@ -233,4 +233,5 @@ func (hs *hostService) connectToPlugin(plugin *PluginInfo) {
 	plugin.Client = proto.NewPluginServiceClient(conn)
 
 	log.Printf("✅ 已连接到插件: %s", plugin.ID)
+	plugin.Status = StatusRunning
 }

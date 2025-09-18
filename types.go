@@ -80,9 +80,10 @@ type HostConfig struct {
 	LogDir    string `json:"log_dir"`    // 日志目录 - 日志文件存储位置
 
 	// === 健康监控 === //
-	HeartbeatInterval time.Duration `json:"heartbeat_interval"`  // 心跳间隔 - 检查插件健康的时间间隔
-	MaxHeartbeatMiss  int           `json:"max_heartbeat_miss"`  // 最大心跳丢失次数 - 超过后认为插件崩溃
-	AutoRestartPlugin bool          `json:"auto_restart_plugin"` // 是否自动重启崩溃的插件
+	HeartbeatInterval     time.Duration `json:"heartbeat_interval"`      // 心跳间隔 - 检查插件健康的时间间隔
+	MaxHeartbeatMiss      int           `json:"max_heartbeat_miss"`      // 最大心跳丢失次数 - 超过后认为插件崩溃
+	AutoRestartPlugin     bool          `json:"auto_restart_plugin"`     // 是否自动重启崩溃的插件
+	EnablePluginReconnect bool          `json:"enable_plugin_reconnect"` // 是否允许插件断线重连
 }
 
 // PluginConfig 插件配置结构体
@@ -99,9 +100,10 @@ type PluginConfig struct {
 	HostAddress string `json:"host_address"` // 主程序地址 - 插件连接的主机地址
 
 	// === 健康监控 === //
-	HeartbeatInterval time.Duration `json:"heartbeat_interval"`  // 心跳间隔 - 发送心跳的时间间隔
-	ReconnectInterval time.Duration `json:"reconnect_interval"`  // 重连间隔 - 连接断开后的重连等待时间
-	MaxReconnectTries int           `json:"max_reconnect_tries"` // 最大重连次数（0表示无限重连）
+	HeartbeatInterval     time.Duration `json:"heartbeat_interval"`       // 心跳间隔 - 发送心跳的时间间隔
+	ReconnectInterval     time.Duration `json:"reconnect_interval"`       // 重连间隔 - 连接断开后的重连等待时间
+	MaxReconnectTries     int           `json:"max_reconnect_tries"`      // 最大重连次数（0表示无限重连）
+	CloseOnHostDisconnect bool          `json:"close_on_host_disconnect"` // 主机断开连接后是否关闭插件
 }
 
 // PluginFunction 插件函数类型定义
@@ -150,29 +152,31 @@ type LogConfig struct {
 // DefaultHostConfig 返回默认的主程序配置
 func DefaultHostConfig() *HostConfig {
 	return &HostConfig{
-		Port:              0, // 自动分配端口
-		PortRange:         []int{50051, 50100},
-		DebugMode:         true,
-		LogLevel:          "info",
-		LogDir:            "./logs",
-		HeartbeatInterval: 10 * time.Second,
-		MaxHeartbeatMiss:  3,
-		AutoRestartPlugin: true,
+		Port:                  0, // 自动分配端口
+		PortRange:             []int{50051, 50100},
+		DebugMode:             true,
+		LogLevel:              "info",
+		LogDir:                "./logs",
+		HeartbeatInterval:     10 * time.Second,
+		MaxHeartbeatMiss:      3,
+		AutoRestartPlugin:     true,
+		EnablePluginReconnect: true, // 默认允许插件断线重连
 	}
 }
 
 // DefaultPluginConfig 返回默认的插件配置
 func DefaultPluginConfig(name, version, description string) *PluginConfig {
 	return &PluginConfig{
-		Name:              name,
-		Version:           version,
-		Description:       description,
-		Logo:              "", // 默认为空Logo
-		Capabilities:      []string{},
-		HostAddress:       "localhost:50051",
-		HeartbeatInterval: 10 * time.Second,
-		ReconnectInterval: 5 * time.Second,
-		MaxReconnectTries: 0, // 无限重连
+		Name:                  name,
+		Version:               version,
+		Description:           description,
+		Logo:                  "", // 默认为空Logo
+		Capabilities:          []string{},
+		HostAddress:           "localhost:50051",
+		HeartbeatInterval:     10 * time.Second,
+		ReconnectInterval:     5 * time.Second,
+		MaxReconnectTries:     0,    // 无限重连
+		CloseOnHostDisconnect: true, // 默认主机断开连接后关闭插件
 	}
 }
 
